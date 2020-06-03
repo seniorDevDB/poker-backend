@@ -1,0 +1,193 @@
+// const express = require("express")
+// const app = express.Router()
+const cors = require('cors')
+const jwt = require("jsonwebtoken")
+const bcrypt = require('bcrypt')
+
+const User = require("../models/User")
+
+
+process.env.SECRET_KEY = 'secret'
+
+module.exports = (app, db) => {
+    app.use(cors())
+    app.post('/register', (req, res) => {
+        console.log("okokok")
+        var today = new Date()
+        const userData = {
+            first_name: req.body.first_name,
+            last_name: req.body.last_name,
+            email: req.body.email,
+            password: req.body.password,
+            created: today
+        }
+        console.log(userData)
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            if(!user) {
+                bcrypt.hash(req.body.password, 10, (err, hash) => {
+                    userData.password = hash
+                    db.users.create(userData)
+                    .then(user => {
+                        res.json({status: user.email + ' registered'})
+                    })
+                    .catch(err => {
+                        res.send('error: ' + err)
+                    })
+                })
+            } else {
+                res.json({error: "User already exists"})
+            }
+        })
+        .catch(err => {
+            res.send('error: ' + err)
+        })
+    })
+
+    app.post('/login', (req, res) => {
+        console.log("login called from frontend")
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("this is login then")
+            if(user) {
+                console.log("ddeeeeeeeeeeeeeeeee", user.password)
+                if(bcrypt.compareSync(req.body.password, user.password)) {
+                    console.log("dfdsfasfdsdf")
+                    let token = jwt.sign(user.dataValues, process.env.SECRET_KEY, {
+                        expiresIn: 1440
+                    })
+                    console.log(token)
+                    res.send(token)
+                }
+                else {
+                    console.log("incorrect password")
+                    res.status(400).json({ error: 'Password is not correct' })
+                }
+            } else {
+                console.log("does not exist")
+                res.status(400).json({ error: 'User does not exist' })
+            }
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+    })
+
+    app.post('/transaction_history', (req, res) => {
+        console.log("history called from frontend", req.body.id)
+        db.transaction_history.findAll({
+            where: {
+                userId: req.body.id
+            }
+        })
+        .then(histories => {
+            console.log("database from db", histories)
+            res.send(histories)
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+    })
+
+    app.post('/player', (req, res) => {
+        console.log("player called from frontend", req.body.receiver);
+        var today = new Date()
+        const p2pData = {
+            date: today,
+            sender: req.body.sender,
+            receiver: req.body.receiver,
+            amount: req.body.amount,
+            status: "complete"
+        }
+        console.log(p2pData)
+        db.users.findOne({
+            where: {
+                email: req.body.receiver
+            }
+        })
+        .then(user => {
+            id = user.id
+            db.transaction_history.findOne({
+                where: {
+                    userId: id
+                }
+            })
+            .then(transation_history_data => {
+                console.log("cvxsdfsfdsfdsdadafdasgasgdsaf", transation_history_data)
+                if(transation_history_data.amount >= Number(req.body.amount)) {
+                    update_amount = Number(req.body.amount) + transation_history_data.amount
+                    console.log(update_amount)
+                    //update the p2p transfer database
+                    db.p2p_transfer.create(p2pData)
+                    // update the amount in the database
+                    transation_history_data.update({
+                        amount: update_amount
+                    })
+                    .then( data => {
+                        res.json({status: 'Transfered'})
+                    })
+                    .catch(err => {
+                        console.log("eeeeeeeeeeeeeeeeee", err)
+                    })
+                }
+                else if (transation_history_data.amount < Number(req.body.amount)) {
+                    console.log("ttttttttttttooooooooooooo mnay")
+                    res.json({ error: 'Too big amount' })
+                }
+                else {
+                    res.json({ error: 'This player does not exist' })
+                }
+            })
+            .catch(err => {
+                console.log("errororvbvbvb 10dddd7", err)
+                res.json({ error: "This player does not exist" })
+            })
+        })
+        .catch(err => {
+            console.log("erroror 107")
+            console.log(err);
+            res.json({ error: "This player does not exist" })
+        })
+
+    })
+
+    app.post('/cashout', (req, res) => {
+        var today = new Date()
+        console.log("cashout called from frontend")
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            if(user.amount >= req.body.amount) {
+                user.update({
+                    amount: user.amount - Number(req.body.amount),
+                    status: "pending",
+                    description: "cash out",
+                    date: today,
+                })
+                .then( () => {
+                    res.json({status: 'Transfered'})
+                })
+            }
+            else if (user.amount < req.body.amount) {
+                res.json({ error: 'Too small amount' })
+            }
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+    })
+}
