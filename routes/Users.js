@@ -9,6 +9,10 @@ const User = require("../models/User")
 
 process.env.SECRET_KEY = 'secret'
 
+description = {
+
+}
+
 module.exports = (app, db) => {
     app.use(cors())
     app.post('/register', (req, res) => {
@@ -19,9 +23,11 @@ module.exports = (app, db) => {
             last_name: req.body.last_name,
             email: req.body.email,
             password: req.body.password,
-            created: today
+            created: today,
+            main_balance: 0,
+            points: 0,
+            rake_back: 0,
         }
-        console.log(userData)
         db.users.findOne({
             where: {
                 email: req.body.email
@@ -86,7 +92,7 @@ module.exports = (app, db) => {
         console.log("history called from frontend", req.body.id)
         db.transaction_history.findAll({
             where: {
-                userId: req.body.id
+                user_id: req.body.id
             }
         })
         .then(histories => {
@@ -109,47 +115,58 @@ module.exports = (app, db) => {
             amount: req.body.amount,
             status: "complete"
         }
-        console.log(p2pData)
+
+        db.users.findOne({
+            where: {
+                email: req.body.sender
+            }
+        })
+        .then(sender_data => {
+            update_balance = Number(sender_data.main_balance) - Number(req.body.amount)
+            console.log(update_balance)
+            sender_data.update({
+                main_balance: update_balance 
+            })
+            const transaction_history_sender_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "P2P to " +  req.body.receiver,
+                status: "complete",
+                main_balance: update_balance,
+                user_id: sender_data.id,
+            }
+            db.transaction_history.create(transaction_history_sender_data)
+        })
+        .catch(err => {
+            console.log("errororvbvbvb 147", err)
+            res.json({ error: "Sender error" })
+        })
+
         db.users.findOne({
             where: {
                 email: req.body.receiver
             }
         })
-        .then(user => {
-            id = user.id
-            db.transaction_history.findOne({
-                where: {
-                    userId: id
-                }
+        .then(receiver_data => {
+            update_balance = Number(receiver_data.main_balance) + Number(req.body.amount)
+            receiver_data.update({
+                main_balance: update_balance
             })
-            .then(transation_history_data => {
-                console.log("cvxsdfsfdsfdsdadafdasgasgdsaf", transation_history_data)
-                if(transation_history_data.amount >= Number(req.body.amount)) {
-                    update_amount = Number(req.body.amount) + transation_history_data.amount
-                    console.log(update_amount)
-                    //update the p2p transfer database
-                    db.p2p_transfer.create(p2pData)
-                    // update the amount in the database
-                    transation_history_data.update({
-                        amount: update_amount
-                    })
-                    .then( data => {
-                        res.json({status: 'Transfered'})
-                    })
-                    .catch(err => {
-                        console.log("eeeeeeeeeeeeeeeeee", err)
-                    })
-                }
-                else if (transation_history_data.amount < Number(req.body.amount)) {
-                    console.log("ttttttttttttooooooooooooo mnay")
-                    res.json({ error: 'Too big amount' })
-                }
-                else {
-                    res.json({ error: 'This player does not exist' })
-                }
+            const transaction_history_receiver_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "P2P from " +  req.body.sender,
+                status: "complete",
+                main_balance: update_balance,
+                user_id: receiver_data.id,
+            }
+            db.transaction_history.create(transaction_history_receiver_data)
+            db.p2p_transfer.create(p2pData)
+            .then( data => {
+                res.json({status: 'Transfered'})
             })
             .catch(err => {
-                console.log("errororvbvbvb 10dddd7", err)
+                console.log("errororvbvbvb 168", err)
                 res.json({ error: "This player does not exist" })
             })
         })
@@ -170,24 +187,31 @@ module.exports = (app, db) => {
             }
         })
         .then(user => {
-            if(user.amount >= req.body.amount) {
-                user.update({
-                    amount: user.amount - Number(req.body.amount),
-                    status: "pending",
-                    description: "cash out",
-                    date: today,
-                })
-                .then( () => {
-                    res.json({status: 'Transfered'})
-                })
+            const cashout_date ={
+                date: today,
+                email: req.body.email,
+                amount: req.body.amount,
+                cash_tag: '',
+                status: 'Pending'
             }
-            else if (user.amount < req.body.amount) {
-                res.json({ error: 'Too small amount' })
+            db.cashout.create(cashout_date)
+
+            const transaction_history_cashout_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "Cashout - Pending",
+                status: "Pending",
+                main_balance: user.main_balance,
+                user_id: user.id
             }
+            db.transaction_history.create(transaction_history_cashout_data)
+            .then( data => {
+                res.json({status: 'Transfered'})
+            })
         })
         .catch(err => {
             console.log("eeeerrrr")
-            res.status(400).json({ error: err })
+            res.json({ error: err })
         })
     })
 }

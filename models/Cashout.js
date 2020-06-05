@@ -1,7 +1,7 @@
 'use strict'
 
 module.exports = (sequelize, DataTypes) => {
-  const TransactionHistory = sequelize.define('transaction_history', {
+  const TransactionHistory = sequelize.define('cashout', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -11,23 +11,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
     },
+    email: {
+        type: DataTypes.STRING
+    },
     amount: {
         type: DataTypes.FLOAT,
         defaultValue: 0
     },
-    description: {
+    cash_tag: {
         type: DataTypes.STRING
     },
     status: {
         type: DataTypes.STRING
-    },
-    main_balance: {
-        type: DataTypes.FLOAT,
-        defaultValue: 0
-    },
-    user_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
     },
   }, {
     timestamps: false
