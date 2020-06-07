@@ -6,6 +6,9 @@ module.exports = (app, db) => {
     app.post('/users', (req, res) => {
         console.log("users called from frontend")
         db.users.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
         })
         .then(users => {
             console.log("database from db", users)
@@ -20,6 +23,9 @@ module.exports = (app, db) => {
     app.post('/p2p_transfer', (req, res) => {
         console.log("users called from frontend")
         db.p2p_transfer.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
         })
         .then(data => {
             console.log("database from db", data)
@@ -34,6 +40,9 @@ module.exports = (app, db) => {
     app.post('/cashout_pending', (req, res) => {
         console.log("users called from frontend")
         db.cashout.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
             where: {
                 Status: "Pending"
             }
@@ -48,12 +57,12 @@ module.exports = (app, db) => {
         })
     })
 
-    app.post('/cashout_complete', (req, res) => {
+    app.post('/cashout_history', (req, res) => {
         console.log("users cashout complete called from frontend")
         db.cashout.findAll({
-            where: {
-                Status: "Complete"
-            }
+            order: [
+                ['id', 'DESC'],
+            ],
         })
         .then(data => {
             console.log("database from db", data)

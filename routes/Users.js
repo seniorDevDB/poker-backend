@@ -91,6 +91,9 @@ module.exports = (app, db) => {
     app.post('/transaction_history', (req, res) => {
         console.log("history called from frontend", req.body.id)
         db.transaction_history.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
             where: {
                 user_id: req.body.id
             }
@@ -113,7 +116,7 @@ module.exports = (app, db) => {
             sender: req.body.sender,
             receiver: req.body.receiver,
             amount: req.body.amount,
-            status: "complete"
+            status: "Complete"
         }
 
         db.users.findOne({
@@ -131,7 +134,7 @@ module.exports = (app, db) => {
                 date: today,
                 amount: req.body.amount,
                 description: "P2P to " +  req.body.receiver,
-                status: "complete",
+                status: "Complete",
                 main_balance: update_balance,
                 user_id: sender_data.id,
             }
@@ -156,7 +159,7 @@ module.exports = (app, db) => {
                 date: today,
                 amount: req.body.amount,
                 description: "P2P from " +  req.body.sender,
-                status: "complete",
+                status: "Complete",
                 main_balance: update_balance,
                 user_id: receiver_data.id,
             }
@@ -195,6 +198,10 @@ module.exports = (app, db) => {
                 status: 'Pending'
             }
             db.cashout.create(cashout_date)
+            update_main_balance = Number(user.main_balance) - Number(req.body.amount)
+            user.update({
+                main_balance: update_main_balance
+            })
 
             const transaction_history_cashout_data = {
                 date: today,
@@ -207,6 +214,44 @@ module.exports = (app, db) => {
             db.transaction_history.create(transaction_history_cashout_data)
             .then( data => {
                 res.json({status: 'Transfered'})
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.json({ error: err })
+        })
+    })
+
+    app.post('/cancel_cashout', (req, res) => {
+        console.log("dddddddddddddddddddddcancel", req.body)
+        db.cashout.findOne({
+            where: {
+                email: req.body.email,
+                date: req.body.date
+            }
+        })
+        .then(user => {
+            console.log("ddddddddddddddddd", user)
+            user.update({
+                status: "Cancelled"
+            })
+
+            db.transaction_history.findOne({
+                where: {
+                    user_id: req.body.id,
+                    date: req.body.date
+                }
+            })
+            .then(transaction_history_data => {
+                console.log("242242242", transaction_history_data)
+                transaction_history_data.update({
+                    status: "Cancelled"
+                })
+                res.json({ status: "Cancelled" })
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.json({ error: err })
             })
         })
         .catch(err => {
