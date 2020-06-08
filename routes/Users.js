@@ -24,7 +24,7 @@ module.exports = (app, db) => {
             email: req.body.email,
             password: req.body.password,
             created: today,
-            main_balance: 0,
+            main_balance: 100,
             points: 0,
             rake_back: 0,
         }
@@ -75,11 +75,11 @@ module.exports = (app, db) => {
                 }
                 else {
                     console.log("incorrect password")
-                    res.status(400).json({ error: 'Password is not correct' })
+                    res.json({ error: 'Password is not correct' })
                 }
             } else {
                 console.log("does not exist")
-                res.status(400).json({ error: 'User does not exist' })
+                res.json({ error: 'User does not exist' })
             }
         })
         .catch(err => {
@@ -223,7 +223,8 @@ module.exports = (app, db) => {
     })
 
     app.post('/cancel_cashout', (req, res) => {
-        console.log("dddddddddddddddddddddcancel", req.body)
+        console.log("dddddddddddddddddddddcancel", req.body.amount)
+        var today = new Date()
         db.cashout.findOne({
             where: {
                 email: req.body.email,
@@ -231,7 +232,6 @@ module.exports = (app, db) => {
             }
         })
         .then(user => {
-            console.log("ddddddddddddddddd", user)
             user.update({
                 status: "Cancelled"
             })
@@ -243,11 +243,35 @@ module.exports = (app, db) => {
                 }
             })
             .then(transaction_history_data => {
-                console.log("242242242", transaction_history_data)
+                console.log("242242242")
+                console.log(req.body.amount)
+                console.log(Number(req.body.amount))
+                console.log( Number(transaction_history_data.main_balance) - Number(req.body.amount))
                 transaction_history_data.update({
-                    status: "Cancelled"
+                    status: "Cancelled",
                 })
-                res.json({ status: "Cancelled" })
+                const temp_data = {
+                    date: today,
+                    amount: Math.abs(Number(req.body.amount)),
+                    description: "Cashout - Cancelled",
+                    status: "Cancelled",
+                    main_balance: Number(transaction_history_data.main_balance) - Number(req.body.amount),
+                    user_id: req.body.id
+                }
+                db.transaction_history.create(temp_data)
+                .then( data => {
+                    db.users.findOne({
+                        where: {
+                            email: req.body.email
+                        }
+                    })
+                    .then(user_data => {
+                        user_data.update({
+                            main_balance: Number(transaction_history_data.main_balance) - Number(req.body.amount)
+                        })
+                    })
+                    res.json({ status: "Cancelled" })
+                })
             })
             .catch(err => {
                 console.log("eeeerrrr")
