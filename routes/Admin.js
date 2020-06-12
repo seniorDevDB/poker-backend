@@ -171,5 +171,42 @@ module.exports = (app, db) => {
         })
     })
 
+    app.post('/deposit_pending', (req, res) => {
+        console.log("users called from frontend")
+        db.deposit.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
+            where: {
+                Status: "Pending"
+            }
+        })
+        .then(data => {
+            console.log("database from db", data)
+            res.send(data)
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+    })
+
+    app.post('/deposit_history', (req, res) => {
+        console.log("users cashout complete called from frontend")
+        db.deposit.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
+        })
+        .then(data => {
+            console.log("database from db", data)
+            res.send(data)
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+    })
+
     
 }

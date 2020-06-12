@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken")
 const bcrypt = require('bcrypt')
 
 const User = require("../models/User")
+const CashAppAutomation = require("../automation/cash_app")
 
 
 process.env.SECRET_KEY = 'secret'
@@ -253,8 +254,8 @@ module.exports = (app, db) => {
                 const temp_data = {
                     date: today,
                     amount: Math.abs(Number(req.body.amount)),
-                    description: "Cashout - Cancelled",
-                    status: "Cancelled",
+                    description: "Cashout - Refund",
+                    status: "Complete",
                     main_balance: Number(transaction_history_data.main_balance) - Number(req.body.amount),
                     user_id: req.body.id
                 }
@@ -282,5 +283,159 @@ module.exports = (app, db) => {
             console.log("eeeerrrr")
             res.json({ error: err })
         })
+    })
+
+    // app.post('/test', (req, res) => {
+    //     console.log("deposit called from frontend");
+    //     CashAppAutomation();
+    // })
+
+    app.post('/deposit_continue', (req, res) => {
+        console.log("deposit called from frontend", req.body)
+        var today = new Date()
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("okok", user)
+            const deposit_data = {
+                date: today,
+                amount: Number(req.body.amount),
+                description: "Deposit - Pending",
+                status: "Pending",
+                main_balance: user.main_balance,
+                user_id: user.id,
+            }
+            console.log("311311311")
+            db.transaction_history.create(deposit_data)
+            .then(result => {
+                console.log("database from db")
+                //save in the deposit table
+                const deposit_table_data = {
+                    date: today,
+                    email: req.body.email,
+                    amount: Number(req.body.amount),
+                    cash_tag: req.body.cash_tag,
+                    status: "Pending"
+                }
+                db.deposit.create(deposit_table_data)
+                .then(result => {
+                    res.json({ time: today })
+                })
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.status(400).json({ error: err })
+            })
+
+        })
+        .catch(err => {
+            console.log("eeeerrrrdddd")
+            res.status(400).json({ error: err })
+        })
+        
+    })
+
+    app.post('/deposit_validate', (req, res) => {
+        console.log("deposit validate called from frontend", req.body)
+        var today = new Date()
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("I got the user", req.body.date)
+            db.transaction_history.findOne({
+                where: {
+                    user_id: user.id,
+                    date: req.body.date
+                }
+            })
+            .then(transaction_history_data => {
+                console.log("get transaction historydddddd")
+                const new_data_complete = {
+                    date: today,
+                    amount: Number(transaction_history_data.amount),
+                    description: "Deposit - Complete",
+                    status: "Complete",
+                    main_balance: Number(transaction_history_data.main_balance) + Number(transaction_history_data.amount),
+                    user_id: transaction_history_data.user_id,
+                }
+                const new_data_fail = {
+                    date: today,
+                    amount: Number(transaction_history_data.amount),
+                    description: "Deposit - Fail",
+                    status: "Fail",
+                    main_balance: Number(transaction_history_data.main_balance),
+                    user_id: transaction_history_data.user_id,
+                }
+                
+                if (req.body.b_status){
+                    transaction_history_data.update({
+                        description: "Deposit - Complete",
+                        status: "Complete" 
+                    })
+                    .then(result => {
+                        console.log("created successed in database")
+                        db.deposit.findOne({
+                            where: {
+                                email: req.body.email,
+                                date: req.body.date,
+                            }
+                        })
+                        .then(deposit_result => {
+                            deposit_result.update({
+                                status: "Complete"
+                            })
+                            res.json({ status: "created" })
+                        })
+                    })
+                    .catch(err => {
+                        console.log("eeeerrrr")
+                        res.status(400).json({ error: err })
+                    })
+                }
+
+                else {
+                    transaction_history_data.update({
+                        description: "Deposit - Fail",
+                        status: "Fail" 
+                    })
+                    .then(result => {
+                        console.log("created successed fail data in database")
+                        db.deposit.findOne({
+                            where: {
+                                email: req.body.email,
+                                date: req.body.date,
+                            }
+                        })
+                        .then(deposit_result => {
+                            deposit_result.update({
+                                status: "Fail"
+                            })
+                            res.json({ status: "created" })
+                        })
+                    })
+                    .catch(err => {
+                        console.log("eeeerrrr")
+                        res.status(400).json({ error: err })
+                    })
+                }
+    
+            })
+            .catch(err => {
+                console.log("eeeerrrrdddd")
+                res.status(400).json({ error: err })
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrsssssssssrrdddd")
+            res.status(400).json({ error: err })
+        })
+        
+        
     })
 }
