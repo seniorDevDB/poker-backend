@@ -341,6 +341,7 @@ module.exports = (app, db) => {
     app.post('/deposit_validate', (req, res) => {
         console.log("deposit validate called from frontend", req.body)
         var today = new Date()
+        console.log("today todaytdddddddddddddd", today)
         db.users.findOne({
             where: {
                 email: req.body.email
@@ -388,7 +389,8 @@ module.exports = (app, db) => {
                         })
                         .then(deposit_result => {
                             deposit_result.update({
-                                status: "Complete"
+                                status: "Complete",
+                                date: today,
                             })
                             res.json({ status: "created" })
                         })
@@ -414,7 +416,8 @@ module.exports = (app, db) => {
                         })
                         .then(deposit_result => {
                             deposit_result.update({
-                                status: "Fail"
+                                status: "Fail",
+                                date: today,
                             })
                             res.json({ status: "created" })
                         })

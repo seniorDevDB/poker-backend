@@ -8,12 +8,12 @@ const sequelize = new Sequelize(env.DATABASE_NAME, env.DATABASE_USERNAME, env.DA
     dialect: env.DATABASE_DIALECT,
     operatorsAliases: false,
   
-    pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-    }
+    // pool: {
+    //     max: 5,
+    //     min: 0,
+    //     acquire: 30000,
+    //     idle: 10000
+    // }
   });
 
 // Connect all the models/tables in the database to a db object, 
