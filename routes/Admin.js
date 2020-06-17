@@ -208,5 +208,130 @@ module.exports = (app, db) => {
         })
     })
 
+    app.post('/transaction_history_from_admin', (req, res) => {
+        console.log("history called from frontend", req.body.email)
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("219219219219")
+            db.transaction_history.findAll({
+                order: [
+                    ['id', 'DESC'],
+                ],
+                where: {
+                    user_id: user.id
+                }
+            })
+            .then(histories => {
+                console.log("database from db", histories)
+                res.send(histories)
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.status(400).json({ error: err })
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+        
+    })
+
+    app.post('/deposit_admin', (req, res) => {
+        console.log("history called from frontend", req.body.email)
+        var today = new Date()
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("219219219219")
+            user.update({
+                main_balance: Number(user.main_balance) + Number(req.body.amount)
+            })
+
+            const deposit_data ={
+                date: today,
+                email: req.body.email,
+                amount: req.body.amount,
+                cash_tag: '',
+                status: 'Complete'
+            }
+            db.deposit.create(deposit_data)
+            
+            const transaction_history_deposit_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "Manual Deposit",
+                status: "Complete",
+                main_balance: user.main_balance,
+                user_id: user.id
+            }
+            db.transaction_history.create(transaction_history_deposit_data)
+            .then(histories => {
+                console.log("database from db", histories)
+                res.send(histories)
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.status(400).json({ error: err })
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
+        
+    })
+
+    app.post('/cashout_admin', (req, res) => {
+        var today = new Date()
+        console.log("cashout called from frontend")
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            const cashout_date ={
+                date: today,
+                email: req.body.email,
+                amount: req.body.amount,
+                cash_tag: '',
+                status: 'Complete'
+            }
+            db.cashout.create(cashout_date)
+            console.log("261261261", user.main_balance)
+            var update_main_balance = Number(user.main_balance) - Number(req.body.amount)
+            console.log("ggg", update_main_balance)
+            user.update({
+                main_balance: update_main_balance
+            })
+            console.log("265265265265")
+            const transaction_history_cashout_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "Manual Cashout",
+                status: "Complete",
+                main_balance: user.main_balance,
+                user_id: user.id
+            }
+            db.transaction_history.create(transaction_history_cashout_data)
+            .then( data => {
+                res.json({status: 'Transfered'})
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.json({ error: err })
+        })
+    })
+
+
     
 }

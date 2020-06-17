@@ -29,6 +29,7 @@ db.transaction_history = require('../models/Transaction_History.js')(sequelize, 
 db.p2p_transfer = require('../models/P2PTransfer.js')(sequelize, Sequelize);
 db.cashout = require('../models/Cashout.js')(sequelize, Sequelize);
 db.deposit = require('../models/Deposit.js')(sequelize, Sequelize);
+db.poker_account = require('../models/Poker_Account.js')(sequelize, Sequelize);
 
 //Relations
 // db.transaction_history.belongsTo(db.users);

@@ -100,7 +100,6 @@ module.exports = (app, db) => {
             }
         })
         .then(histories => {
-            console.log("database from db", histories)
             res.send(histories)
         })
         .catch(err => {
@@ -377,10 +376,22 @@ module.exports = (app, db) => {
                 if (req.body.b_status){
                     transaction_history_data.update({
                         description: "Deposit - Complete",
-                        status: "Complete" 
+                        status: "Complete",
+                        main_balance: Number(transaction_history_data.main_balance) + Number(transaction_history_data.amount),
                     })
                     .then(result => {
                         console.log("created successed in database")
+                        db.users.findOne({
+                            where: {
+                                email: req.body.email,
+                            }
+                        })
+                        .then(user_result => {
+                            user_result.update({
+                                main_balance: Number(transaction_history_data.main_balance) + Number(transaction_history_data.amount),
+                            })
+                        })
+
                         db.deposit.findOne({
                             where: {
                                 email: req.body.email,
@@ -440,5 +451,75 @@ module.exports = (app, db) => {
         })
         
         
+    })
+
+    app.post('/add_poker_account', (req, res) => {
+        var today = new Date()
+        const pokerAccountData = {
+            date: today,
+            email: req.body.email,
+            club_name: req.body.club_name,
+            username: req.body.username,
+            user_id: req.body.user_id,
+        }
+        db.poker_account.findOne({
+            where: {
+                email: req.body.email,
+                club_name: req.body.club_name,
+                username: req.body.username,
+                user_id: req.body.user_id,
+            }
+        })
+        .then(poker_account => {
+            if(!poker_account) {
+               console.log("create a new poker account")
+               db.poker_account.create(pokerAccountData)
+               .then(acount => {
+                    db.poker_account.findAll({
+                        order: [
+                            ['id', 'DESC'],
+                        ],
+                        where: {
+                            email: req.body.email
+                        }
+                    })
+                    .then(accounts => {
+                        res.send(accounts)
+                    })
+                    .catch(err => {
+                        console.log("eeeerrrr")
+                        res.status(400).json({ error: err })
+                    })
+                })
+                .catch(err => {
+                    res.send('error: ' + err)
+                })
+            } else {
+                res.json({error: "User already exists"})
+            }
+        })
+        .catch(err => {
+            res.send('error: ' + err)
+        })
+    })
+
+    app.post('/get_poker_account', (req, res) => {
+        console.log("poker called called called", req.body.email)
+        db.poker_account.findAll({
+            order: [
+                ['id', 'DESC'],
+            ],
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(accounts => {
+            console.log("518518", accounts)
+            res.send(accounts)
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.status(400).json({ error: err })
+        })
     })
 }
