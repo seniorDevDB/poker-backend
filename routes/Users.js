@@ -190,6 +190,9 @@ module.exports = (app, db) => {
             }
         })
         .then(user => {
+            if (Number(req.body.amount) > Number(user.main_balance)){
+                res.json({big_amount: 'Too big amount'})
+            }
             const cashout_date ={
                 date: today,
                 email: req.body.email,
