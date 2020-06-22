@@ -522,7 +522,160 @@ module.exports = (app, db) => {
         })
         .catch(err => {
             console.log("eeeerrrr")
-            res.status(400).json({ error: err })
+            res.json({ error: err })
+        })
+    })
+
+    app.post('/poker_automation_pending', (req, res) => {
+        console.log("called from frontend poker automation", req.body)
+        var today = new Date()
+        const pokerAutomationTransferData = {
+            date: today,
+            email: req.body.email,
+            amount: req.body.amount,
+            transfer_from: req.body.transfer_from,
+            transfer_to: req.body.transfer_to
+        }
+        db.transfer.create(pokerAutomationTransferData)
+        // .then(accounts => {
+        //     console.log("518518")
+        //     res.send({ status: "Success" })
+        // })
+        // .catch(err => {
+        //     console.log("eeeerrrr")
+        //     res.json({ error: err })
+        // })
+
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("I got the user")
+            if (req.body.transfer_to == "Main Balance"){
+                const pokerAutomationTransactionHistoryData_from = {
+                    date: today,
+                    amount: Number(req.body.amount),
+                    description: "Transfer from " + req.body.transfer_from,
+                    status: "Pending",
+                    main_balance: Number(user.main_balance),
+                    user_id: user.id,
+                }
+                db.transaction_history.create(pokerAutomationTransactionHistoryData_from)
+                .then(info => {
+                    console.log("566666666")
+                    res.json({ date: today })
+                })
+                .catch(err => {
+                    console.log("eeeerrrr")
+                    res.status(400).json({ error: err })
+                })
+            }
+            else {
+                const pokerAutomationTransactionHistoryData_to = {
+                    date: today,
+                    amount: Number(req.body.amount),
+                    description: "Transfer to " + req.body.transfer_from,
+                    status: "Pending",
+                    main_balance: Number(user.main_balance),
+                    user_id: user.id,
+                }
+                db.transaction_history.create(pokerAutomationTransactionHistoryData_to)
+                .then(info => {
+                    console.log("566666666")
+                    res.json({ date: today })
+                })
+                .catch(err => {
+                    console.log("eeeerrrr")
+                    res.json({ error: err })
+                })
+            }
+        })
+
+    })
+
+    app.post('/poker_automation_complete', (req, res) => {
+        console.log("poker called called called complete", req.body.date)
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            console.log("605605", user)
+            db.transaction_history.findOne({
+                where: {
+                    user_id: user.id,
+                    date: req.body.date
+                }
+            })
+            .then(result => {
+                console.log("kkkkkkkk", result)
+                if (result.description == "Transfer to Main Balance"){
+                    console.log("615")
+                    result.update({
+                        status: "Complete",
+                        main_balance: Number(result.main_balance) + Number(req.body.amount)
+                    })
+                    res.json({ status: "Success" })
+                }
+                else if (result.description == "Transfer from Main Balance"){
+                    console.log("623")
+                    result.update({
+                        status: "Complete",
+                        main_balance: Number(result.main_balance) - Number(req.body.amount)
+                    })
+                    res.json({ status: "Success" })
+                }
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.json({ error: err })
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.json({ error: err })
+        })
+    })
+
+    app.post('/poker_automation_fail', (req, res) => {
+        console.log("poker called called called complete", req.body.email)
+        db.users.findOne({
+            where: {
+                email: req.body.email
+            }
+        })
+        .then(user => {
+            db.transaction_history.findOne({
+                where: {
+                    user_id: user.id,
+                    date: req.body.date
+                }
+            })
+            .then(result => {
+                if (result.description == "Transfer to Main Balance"){
+                    result.update({
+                        status: "Fail",
+                    })
+                    res.json({ status: "Success" })
+                }
+                else if (result.description == "Transfer from Main Balance"){
+                    result.update({
+                        status: "Fail",
+                    })
+                    res.json({ status: "Success" })
+                }
+            })
+            .catch(err => {
+                console.log("eeeerrrr")
+                res.json({ error: err })
+            })
+        })
+        .catch(err => {
+            console.log("eeeerrrr")
+            res.json({ error: err })
         })
     })
 }
