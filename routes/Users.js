@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken")
 const bcrypt = require('bcrypt')
 
 const User = require("../models/User")
-const CashAppAutomation = require("../automation/cash_app")
+// const CashAppAutomation = require("../automation/cash_app")
 
 
 process.env.SECRET_KEY = 'secret'
@@ -193,6 +193,20 @@ module.exports = (app, db) => {
             if (Number(req.body.amount) > Number(user.main_balance)){
                 res.json({big_amount: 'Too big amount'})
             }
+            //check if it is only pending cashout
+            db.transfer_from.findAll({
+                where:{
+                    user_id: user.id,
+                    description: "Cashout - Pending",
+                    status: "Pending"
+                }
+            })
+            .then( cashout_pending_result => {
+                if (cashout_pending_result.length >= 1){
+                    res.json({one_pending_status: "You can only have one pending cashout request at a time"})
+                }
+            })
+
             const cashout_date ={
                 date: today,
                 email: req.body.email,
@@ -201,6 +215,7 @@ module.exports = (app, db) => {
                 status: 'Pending'
             }
             db.cashout.create(cashout_date)
+
             update_main_balance = Number(user.main_balance) - Number(req.body.amount)
             user.update({
                 main_balance: update_main_balance
@@ -603,6 +618,19 @@ module.exports = (app, db) => {
             }
         })
         .then(user => {
+            if (req.body.transfer_to == "Main Balance"){
+                console.log("6075607", Number(user.main_balance) + Number(req.body.amount))
+                user.update({
+                    main_balance: Number(user.main_balance) + Number(req.body.amount)
+                })
+            }
+            else if (req.body.transfer_from == "Main Balance"){
+                console.log("6075607", Number(user.main_balance) - Number(req.body.amount))
+                user.update({
+                    main_balance: Number(user.main_balance) - Number(req.body.amount)
+                })
+            }
+
             console.log("605605", user)
             db.transaction_history.findOne({
                 where: {
@@ -612,7 +640,7 @@ module.exports = (app, db) => {
             })
             .then(result => {
                 console.log("kkkkkkkk", result)
-                if (result.description == "Transfer to Main Balance"){
+                if (result.description.includes('Transfer from')){
                     console.log("615")
                     result.update({
                         status: "Complete",
@@ -620,7 +648,7 @@ module.exports = (app, db) => {
                     })
                     res.json({ status: "Success" })
                 }
-                else if (result.description == "Transfer from Main Balance"){
+                else if (result.description.includes('Transfer to')){
                     console.log("623")
                     result.update({
                         status: "Complete",
