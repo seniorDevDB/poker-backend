@@ -574,7 +574,7 @@ module.exports = (app, db) => {
                     amount: Number(req.body.amount),
                     description: "Transfer from " + req.body.transfer_from,
                     status: "Pending",
-                    main_balance: Number(user.main_balance),
+                    main_balance: Number(user.main_balance) + Number(req.body.amount),
                     user_id: user.id,
                 }
                 db.transaction_history.create(pokerAutomationTransactionHistoryData_from)
@@ -591,9 +591,9 @@ module.exports = (app, db) => {
                 const pokerAutomationTransactionHistoryData_to = {
                     date: today,
                     amount: Number(req.body.amount),
-                    description: "Transfer to " + req.body.transfer_from,
+                    description: "Transfer to " + req.body.transfer_to,
                     status: "Pending",
-                    main_balance: Number(user.main_balance),
+                    main_balance: Number(user.main_balance) - Number(req.body.amount),
                     user_id: user.id,
                 }
                 db.transaction_history.create(pokerAutomationTransactionHistoryData_to)
@@ -640,22 +640,26 @@ module.exports = (app, db) => {
             })
             .then(result => {
                 console.log("kkkkkkkk", result)
-                if (result.description.includes('Transfer from')){
-                    console.log("615")
-                    result.update({
-                        status: "Complete",
-                        main_balance: Number(result.main_balance) + Number(req.body.amount)
-                    })
-                    res.json({ status: "Success" })
-                }
-                else if (result.description.includes('Transfer to')){
-                    console.log("623")
-                    result.update({
-                        status: "Complete",
-                        main_balance: Number(result.main_balance) - Number(req.body.amount)
-                    })
-                    res.json({ status: "Success" })
-                }
+                result.update({
+                    status: "Complete",
+                })
+                res.json({ status: "Success" })
+                // if (result.description.includes('Transfer from')){
+                //     console.log("615")
+                //     result.update({
+                //         status: "Complete",
+                //         main_balance: Number(result.main_balance) + Number(req.body.amount)
+                //     })
+                //     res.json({ status: "Success" })
+                // }
+                // else if (result.description.includes('Transfer to')){
+                //     console.log("623")
+                //     result.update({
+                //         status: "Complete",
+                //         main_balance: Number(result.main_balance) - Number(req.body.amount)
+                //     })
+                //     res.json({ status: "Success" })
+                // }
             })
             .catch(err => {
                 console.log("eeeerrrr")
@@ -676,6 +680,13 @@ module.exports = (app, db) => {
             }
         })
         .then(user => {
+            // if (req.body.transfer_to == "Main Balance"){
+
+            // }
+            // else if (req.body.transfer_from == "Main Balance"){
+
+            // }
+
             db.transaction_history.findOne({
                 where: {
                     user_id: user.id,
@@ -683,15 +694,23 @@ module.exports = (app, db) => {
                 }
             })
             .then(result => {
-                if (result.description == "Transfer to Main Balance"){
+                if (result.description.includes('Transfer to')){
+                    user.update({
+                        main_balance: Number(user.main_balance) + Number(req.body.amount)
+                    })
                     result.update({
                         status: "Fail",
+                        main_balance: Number(result.main_balance) + Number(req.body.amount)
                     })
                     res.json({ status: "Success" })
                 }
                 else if (result.description == "Transfer from Main Balance"){
+                    user.update({
+                        main_balance: Number(user.main_balance) - Number(req.body.amount)
+                    })
                     result.update({
                         status: "Fail",
+                        main_balance: Number(result.main_balance) - Number(req.body.amount)
                     })
                     res.json({ status: "Success" })
                 }
