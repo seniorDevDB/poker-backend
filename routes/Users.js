@@ -197,11 +197,10 @@ module.exports = (app, db) => {
           res.json({ big_amount: "Too big amount" });
         }
         //check if it is only pending cashout
-        db.transfer_from
+        db.cashout
           .findAll({
             where: {
-              user_id: user.id,
-              description: "Cashout - Pending",
+              email: req.body.email,
               status: "Pending",
             },
           })
@@ -575,6 +574,7 @@ module.exports = (app, db) => {
       amount: req.body.amount,
       transfer_from: req.body.transfer_from,
       transfer_to: req.body.transfer_to,
+      status: "Pending",
     };
     db.transfer.create(pokerAutomationTransferData);
     // .then(accounts => {
@@ -600,7 +600,8 @@ module.exports = (app, db) => {
             amount: Number(req.body.amount),
             description: "Transfer from " + req.body.transfer_from,
             status: "Pending",
-            main_balance: Number(user.main_balance) + Number(req.body.amount),
+            // main_balance: Number(user.main_balance) + Number(req.body.amount),
+            main_balance: Number(user.main_balance),
             user_id: user.id,
           };
           db.transaction_history
@@ -619,7 +620,8 @@ module.exports = (app, db) => {
             amount: Number(req.body.amount),
             description: "Transfer to " + req.body.transfer_to,
             status: "Pending",
-            main_balance: Number(user.main_balance) - Number(req.body.amount),
+            // main_balance: Number(user.main_balance) - Number(req.body.amount),
+            main_balance: Number(user.main_balance),
             user_id: user.id,
           };
           db.transaction_history
