@@ -210,36 +210,36 @@ module.exports = (app, db) => {
                 one_pending_status:
                   "You can only have one pending cashout request at a time",
               });
+            } else {
+              const cashout_date = {
+                date: today,
+                email: req.body.email,
+                amount: req.body.amount,
+                cash_tag: "",
+                status: "Pending",
+              };
+              db.cashout.create(cashout_date);
+
+              update_main_balance =
+                Number(user.main_balance) - Number(req.body.amount);
+              user.update({
+                main_balance: update_main_balance,
+              });
+
+              const transaction_history_cashout_data = {
+                date: today,
+                amount: req.body.amount,
+                description: "Cashout - Pending",
+                status: "Pending",
+                main_balance: user.main_balance,
+                user_id: user.id,
+              };
+              db.transaction_history
+                .create(transaction_history_cashout_data)
+                .then((data) => {
+                  res.json({ status: "Transfered" });
+                });
             }
-          });
-
-        const cashout_date = {
-          date: today,
-          email: req.body.email,
-          amount: req.body.amount,
-          cash_tag: "",
-          status: "Pending",
-        };
-        db.cashout.create(cashout_date);
-
-        update_main_balance =
-          Number(user.main_balance) - Number(req.body.amount);
-        user.update({
-          main_balance: update_main_balance,
-        });
-
-        const transaction_history_cashout_data = {
-          date: today,
-          amount: req.body.amount,
-          description: "Cashout - Pending",
-          status: "Pending",
-          main_balance: user.main_balance,
-          user_id: user.id,
-        };
-        db.transaction_history
-          .create(transaction_history_cashout_data)
-          .then((data) => {
-            res.json({ status: "Transfered" });
           });
       })
       .catch((err) => {
@@ -594,7 +594,9 @@ module.exports = (app, db) => {
       })
       .then((user) => {
         console.log("I got the user");
-        if (req.body.transfer_to == "Main Balance") {
+        if (Number(req.body.amount > Number(user.main_balance))) {
+          res.json({ status: "Too big amount" });
+        } else if (req.body.transfer_to == "Main Balance") {
           const pokerAutomationTransactionHistoryData_from = {
             date: today,
             amount: Number(req.body.amount),
@@ -614,14 +616,14 @@ module.exports = (app, db) => {
               console.log("eeeerrrr");
               res.status(400).json({ error: err });
             });
-        } else {
+        } else if (req.body.transfer_from == "Main Balance") {
           const pokerAutomationTransactionHistoryData_to = {
             date: today,
             amount: Number(req.body.amount),
             description: "Transfer to " + req.body.transfer_to,
             status: "Pending",
-            // main_balance: Number(user.main_balance) - Number(req.body.amount),
-            main_balance: Number(user.main_balance),
+            main_balance: Number(user.main_balance) - Number(req.body.amount),
+            // main_balance: Number(user.main_balance),
             user_id: user.id,
           };
           db.transaction_history
@@ -661,7 +663,8 @@ module.exports = (app, db) => {
             Number(user.main_balance) - Number(req.body.amount)
           );
           user.update({
-            main_balance: Number(user.main_balance) - Number(req.body.amount),
+            // main_balance: Number(user.main_balance) - Number(req.body.amount),
+            main_balance: Number(user.main_balance),
           });
         }
 
