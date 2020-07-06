@@ -22,7 +22,7 @@ module.exports = (app, db) => {
       email: req.body.email,
       password: req.body.password,
       created: today,
-      main_balance: 100,
+      main_balance: 0,
       points: 0,
       rake_back: 0,
     };
@@ -594,7 +594,10 @@ module.exports = (app, db) => {
       })
       .then((user) => {
         console.log("I got the user");
-        if (Number(req.body.amount > Number(user.main_balance))) {
+        if (
+          req.body.transfer_from == "Main Balance" &&
+          Number(req.body.amount > Number(user.main_balance))
+        ) {
           res.json({ status: "Too big amount" });
         } else if (req.body.transfer_to == "Main Balance") {
           const pokerAutomationTransactionHistoryData_from = {
@@ -617,6 +620,11 @@ module.exports = (app, db) => {
               res.status(400).json({ error: err });
             });
         } else if (req.body.transfer_from == "Main Balance") {
+          console.log(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            user.main_balance
+          );
+          console.log(Number(user.main_balance) - Number(req.body.amount));
           const pokerAutomationTransactionHistoryData_to = {
             date: today,
             amount: Number(req.body.amount),
@@ -629,6 +637,10 @@ module.exports = (app, db) => {
           db.transaction_history
             .create(pokerAutomationTransactionHistoryData_to)
             .then((info) => {
+              user.update({
+                main_balance:
+                  Number(user.main_balance) - Number(req.body.amount),
+              });
               console.log("566666666");
               res.json({ date: today });
             })
@@ -678,6 +690,12 @@ module.exports = (app, db) => {
           })
           .then((result) => {
             console.log("kkkkkkkk", result);
+            if (req.body.transfer_to == "Main Balance") {
+              result.update({
+                main_balance:
+                  Number(result.main_balance) + Number(req.body.amount),
+              });
+            }
             result.update({
               status: "Complete",
             });
