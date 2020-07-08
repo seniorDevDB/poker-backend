@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 const User = require("../models/User");
+const Op = require("sequelize").Op;
 // const CashAppAutomation = require("../automation/cash_app")
 
 process.env.SECRET_KEY = "secret";
@@ -495,20 +496,89 @@ module.exports = (app, db) => {
       });
   });
 
-  app.post("/add_poker_account", (req, res) => {
+  app.post("/add_cash_account", (req, res) => {
     var today = new Date();
-    const pokerAccountData = {
+    const cashAccountData = {
       date: today,
       email: req.body.email,
-      club_name: req.body.club_name,
-      username: req.body.username,
-      user_id: req.body.user_id,
+      account_name: req.body.cash_tag,
+      poker_or_cash: "cash",
     };
     db.poker_account
       .findOne({
         where: {
           email: req.body.email,
-          club_name: req.body.club_name,
+          account_name: req.body.cash_tag,
+        },
+      })
+      .then((poker_account) => {
+        if (!poker_account) {
+          console.log("create a new cash account");
+          db.poker_account
+            .create(cashAccountData)
+            .then((acount) => {
+              db.poker_account
+                .findAll({
+                  order: [["id", "DESC"]],
+                  where: {
+                    email: req.body.email,
+                  },
+                })
+                .then((accounts) => {
+                  res.send(accounts);
+                })
+                .catch((err) => {
+                  console.log("eeeerrrr");
+                  res.status(400).json({ error: err });
+                });
+            })
+            .catch((err) => {
+              res.send("error: " + err);
+            });
+        } else {
+          res.json({ error: "User already exists" });
+        }
+      })
+      .catch((err) => {
+        res.send("error: " + err);
+      });
+  });
+
+  app.post("/get_cash_account", (req, res) => {
+    console.log("cash called called called", req.body.email);
+    db.poker_account
+      .findAll({
+        order: [["id", "DESC"]],
+        where: {
+          email: req.body.email,
+          poker_or_cash: "cash",
+        },
+      })
+      .then((accounts) => {
+        console.log("518518", accounts);
+        res.send(accounts);
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.json({ error: err });
+      });
+  });
+
+  app.post("/add_poker_account", (req, res) => {
+    var today = new Date();
+    const pokerAccountData = {
+      date: today,
+      email: req.body.email,
+      account_name: req.body.club_name,
+      username: req.body.username,
+      user_id: req.body.user_id,
+      poker_or_cash: "poker",
+    };
+    db.poker_account
+      .findOne({
+        where: {
+          email: req.body.email,
+          account_name: req.body.club_name,
           username: req.body.username,
           user_id: req.body.user_id,
         },
@@ -553,6 +623,7 @@ module.exports = (app, db) => {
         order: [["id", "DESC"]],
         where: {
           email: req.body.email,
+          poker_or_cash: "poker",
         },
       })
       .then((accounts) => {
@@ -756,7 +827,6 @@ module.exports = (app, db) => {
             console.log("this is okay", result);
             console.log("okok", result.description);
             if (result.description.includes("Transfer to")) {
-              console.log("735735735735735");
               user.update({
                 main_balance:
                   Number(user.main_balance) + Number(req.body.amount),
@@ -774,13 +844,15 @@ module.exports = (app, db) => {
               console.log("750750750");
               user.update({
                 main_balance:
-                  Number(user.main_balance) - Number(req.body.amount),
+                  // Number(user.main_balance) - Number(req.body.amount),
+                  Number(user.main_balance),
               });
               result
                 .update({
                   status: "Fail",
                   main_balance:
-                    Number(result.main_balance) - Number(req.body.amount),
+                    // Number(result.main_balance) - Number(req.body.amount),
+                    Number(user.main_balance),
                 })
                 .then((success) => {
                   res.json({ status: "Success" });
