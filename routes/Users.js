@@ -320,10 +320,50 @@ module.exports = (app, db) => {
       });
   });
 
-  // app.post('/test', (req, res) => {
-  //     console.log("deposit called from frontend");
-  //     CashAppAutomation();
-  // })
+  app.post("/deposit_cancel", (req, res) => {
+    console.log("deposit cancel called from frontend", req.body);
+    console.log(req.body.cash_tag, "ddd");
+    db.users
+      .findOne({
+        where: {
+          email: req.body.email,
+        },
+      })
+      .then((user) => {
+        console.log("okok", user);
+        console.log("311311311");
+        db.transaction_history
+          .destroy({
+            where: {
+              date: req.body.time,
+              user_id: user.id,
+              amount: req.body.amount,
+            },
+          })
+          .then((cancel_data) => {
+            db.deposit
+              .destroy({
+                where: {
+                  date: req.body.time,
+                  email: req.body.email,
+                  amount: req.body.amount,
+                  cash_tag: req.body.cash_tag,
+                },
+              })
+              .then((cancel_deposit_data) => {
+                res.json({ status: "success" });
+              })
+              .catch((err) => {
+                console.log("eeefffffferrrr");
+                res.status(400).json({ error: err });
+              });
+          });
+      })
+      .catch((err) => {
+        console.log("eeeerrrrdddd");
+        res.status(400).json({ error: err });
+      });
+  });
 
   app.post("/deposit_continue", (req, res) => {
     console.log("deposit called from frontend", req.body);
@@ -411,15 +451,17 @@ module.exports = (app, db) => {
               main_balance: Number(transaction_history_data.main_balance),
               user_id: transaction_history_data.user_id,
             };
-
+            console.log("here is status status", req.body.b_status);
             if (req.body.b_status) {
+              console.log("here is successssssssssssssss");
+              new_main_balance =
+                Number(transaction_history_data.main_balance) +
+                Number(transaction_history_data.amount);
               transaction_history_data
                 .update({
                   description: "Deposit - Complete",
                   status: "Complete",
-                  main_balance:
-                    Number(transaction_history_data.main_balance) +
-                    Number(transaction_history_data.amount),
+                  main_balance: new_main_balance,
                 })
                 .then((result) => {
                   console.log("created successed in database");
@@ -431,9 +473,7 @@ module.exports = (app, db) => {
                     })
                     .then((user_result) => {
                       user_result.update({
-                        main_balance:
-                          Number(transaction_history_data.main_balance) +
-                          Number(transaction_history_data.amount),
+                        main_balance: new_main_balance,
                       });
                     });
 
@@ -457,6 +497,9 @@ module.exports = (app, db) => {
                   res.status(400).json({ error: err });
                 });
             } else {
+              console.log(
+                "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+              );
               transaction_history_data
                 .update({
                   description: "Deposit - Fail",
@@ -501,14 +544,15 @@ module.exports = (app, db) => {
     const cashAccountData = {
       date: today,
       email: req.body.email,
-      account_name: req.body.cash_tag,
+      account_name: "Cash Tag",
+      username: req.body.cash_tag,
       poker_or_cash: "cash",
     };
     db.poker_account
       .findOne({
         where: {
           email: req.body.email,
-          account_name: req.body.cash_tag,
+          username: req.body.cash_tag,
         },
       })
       .then((poker_account) => {
@@ -628,6 +672,45 @@ module.exports = (app, db) => {
       })
       .then((accounts) => {
         console.log("518518", accounts);
+        res.send(accounts);
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.json({ error: err });
+      });
+  });
+
+  app.post("/get_all_account", (req, res) => {
+    console.log("poker called called called", req.body.email);
+    db.poker_account
+      .findAll({
+        order: [["id", "DESC"]],
+        where: {
+          email: req.body.email,
+        },
+      })
+      .then((accounts) => {
+        console.log("518518", accounts);
+        res.send(accounts);
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.json({ error: err });
+      });
+  });
+
+  app.post("/get_cash_account", (req, res) => {
+    console.log("cash called called called", req.body.email);
+    db.poker_account
+      .findAll({
+        order: [["id", "DESC"]],
+        where: {
+          email: req.body.email,
+          poker_or_cash: "cash",
+        },
+      })
+      .then((accounts) => {
+        console.log("653", accounts);
         res.send(accounts);
       })
       .catch((err) => {
