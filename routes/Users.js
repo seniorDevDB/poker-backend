@@ -5,7 +5,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 const User = require("../models/User");
-const Op = require("sequelize").Op;
+const mailer = require("nodemailer");
+//const { where } = require("sequelize/types");
 // const CashAppAutomation = require("../automation/cash_app")
 
 process.env.SECRET_KEY = "secret";
@@ -86,6 +87,43 @@ module.exports = (app, db) => {
       .catch((err) => {
         console.log("eeeerrrr");
         res.status(400).json({ error: err });
+      });
+  });
+
+  app.post("/reset_password", (req, res) => {
+    console.log("reset password is called" + req.body.email);
+    const email = req.body.email;
+    db.users
+      .findOne({
+        where: {
+          email: email,
+        },
+      })
+      .then((user) => {
+        if (!user) {
+          res.json({ error: "No user found with that email address." });
+        } else {
+          var transporter = mailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: "elitedev416@gmail.com",
+              pass: "Kiuj1234+",
+            },
+          });
+          var mailOptions = {
+            from: "elitedev416@gmail.com",
+            to: email,
+            subject: "Reset Password from PokerApp",
+            text: "Test",
+          };
+          transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+              console.log(error);
+            } else {
+              console.log("Email sent: " + info.response);
+            }
+          });
+        }
       });
   });
 
