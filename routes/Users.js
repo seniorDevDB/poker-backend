@@ -254,7 +254,7 @@ module.exports = (app, db) => {
                 date: today,
                 email: req.body.email,
                 amount: req.body.amount,
-                cash_tag: "",
+                cash_tag: req.body.cash_tag,
                 status: "Pending",
               };
               db.cashout.create(cashout_date);
@@ -298,59 +298,65 @@ module.exports = (app, db) => {
         },
       })
       .then((user) => {
-        user.update({
-          status: "Cancelled",
-        });
-
-        db.transaction_history
-          .findOne({
-            where: {
-              user_id: req.body.id,
-              date: req.body.date,
-            },
-          })
-          .then((transaction_history_data) => {
-            console.log("242242242");
-            console.log(req.body.amount);
-            console.log(Number(req.body.amount));
-            console.log(
-              Number(transaction_history_data.main_balance) -
-                Number(req.body.amount)
-            );
-            transaction_history_data.update({
-              status: "Cancelled",
-            });
-            const temp_data = {
-              date: today,
-              amount: Math.abs(Number(req.body.amount)),
-              description: "Cashout - Refund",
-              status: "Complete",
-              main_balance:
-                Number(transaction_history_data.main_balance) -
-                Number(req.body.amount),
-              user_id: req.body.id,
-            };
-            db.transaction_history.create(temp_data).then((data) => {
-              db.users
-                .findOne({
-                  where: {
-                    email: req.body.email,
-                  },
-                })
-                .then((user_data) => {
-                  user_data.update({
-                    main_balance:
-                      Number(transaction_history_data.main_balance) -
-                      Number(req.body.amount),
-                  });
-                });
-              res.json({ status: "Cancelled" });
-            });
-          })
-          .catch((err) => {
-            console.log("eeeerrrr");
-            res.json({ error: err });
+        if (user.status == "Complete" || user.status == "Declined"){
+          res.json({ status: "This transaction can no longer be cancelled." });
+        }
+        else{
+          user.update({
+            status: "Cancelled",
           });
+  
+          db.transaction_history
+            .findOne({
+              where: {
+                user_id: req.body.id,
+                date: req.body.date,
+              },
+            })
+            .then((transaction_history_data) => {
+              console.log("242242242");
+              console.log(req.body.amount);
+              console.log(Number(req.body.amount));
+              console.log(
+                Number(transaction_history_data.main_balance) -
+                  Number(req.body.amount)
+              );
+              transaction_history_data.update({
+                status: "Cancelled",
+              });
+              const temp_data = {
+                date: today,
+                amount: Math.abs(Number(req.body.amount)),
+                description: "Cashout - Refund",
+                status: "Complete",
+                main_balance:
+                  Number(transaction_history_data.main_balance) -
+                  Number(req.body.amount),
+                user_id: req.body.id,
+              };
+              db.transaction_history.create(temp_data).then((data) => {
+                db.users
+                  .findOne({
+                    where: {
+                      email: req.body.email,
+                    },
+                  })
+                  .then((user_data) => {
+                    user_data.update({
+                      main_balance:
+                        Number(transaction_history_data.main_balance) -
+                        Number(req.body.amount),
+                    });
+                  });
+                res.json({ status: "Cancelled" });
+              });
+            })
+            .catch((err) => {
+              console.log("eeeerrrr");
+              res.json({ error: err });
+            });
+        }
+        
       })
       .catch((err) => {
         console.log("eeeerrrr");
