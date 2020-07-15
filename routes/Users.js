@@ -878,6 +878,19 @@ module.exports = (app, db) => {
           });
         }
 
+        db.transfer
+          .findOne({
+            where: {
+              date: req.body.date,
+              email: req.body.email
+            }
+          })
+          .then((transfer_result) => {
+            transfer_result.update({
+              status: "Complete"
+            })
+          })
+
         console.log("605605", user);
         db.transaction_history
           .findOne({
@@ -942,6 +955,19 @@ module.exports = (app, db) => {
         // else if (req.body.transfer_from == "Main Balance"){
 
         // }
+
+        db.transfer
+        .findOne({
+          where: {
+            date: req.body.date,
+            email: req.body.email
+          }
+        })
+        .then((transfer_result) => {
+          transfer_result.update({
+            status: "Fail"
+          })
+        })
 
         db.transaction_history
           .findOne({
