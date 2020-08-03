@@ -90,6 +90,116 @@ module.exports = (app, db) => {
       });
   });
 
+  app.post("/check_poker_complete_or_fail", (req, res) => {
+    console.log("login called from frontenddddd");
+    db.users
+      .findOne({
+        where: {
+          email: req.body.email,
+        },
+      })
+      .then((user) => {
+        console.log("nnnnnnnnnnnnn", user)
+        db.transfer
+          .findAll({
+            limit: 1,
+            where: {
+              email: req.body.email,
+              status: "Pending",
+            },
+            order: [['id', 'DESC']]
+          })
+          .then((transfer_data) => {
+            console.log("112112112", transfer_data[0].status)
+            if (!transfer_data || transfer_data[0].status != "Pending"){
+              res.json({ status: "none" });
+            }
+            else if (transfer_data[0].status == "Pending"){
+              res.json({ date: transfer_data[0].date });
+            }
+          })
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  });
+
+  app.post("/update_status_when_login", (req, res) => {
+    console.log("login update_status_when_login from frontenddddd");
+    db.users
+      .findOne({
+        where: {
+          email: req.body.email,
+        },
+      })
+      .then((user) => {
+        console.log("nnnnnnndddnnnnnn", user)
+        db.transfer
+          .findAll({
+            limit: 1,
+            where: {
+              email: req.body.email,
+              status: "Pending",
+            },
+            order: [['id', 'DESC']]
+          })
+          .then((transfer_data) => {
+            console.log("112112112", transfer_data[0].status)
+            // if (!transfer_data || transfer_data[0].status != "Pending"){
+            //   res.json({ status: "none" });
+            // }
+            // else if (transfer_data[0].status == "Pending"){
+            //   res.json({ date: transfer_data[0].date });
+            // }
+            if (req.body.status == "success"){
+              transfer_data[0].update({
+                status: "Complete"
+              })
+            }
+            else if (req.body.status == "fail" || req.body.status == "error"){
+              transfer_data[0].update({
+                status: "Fail"
+              })
+            }
+
+            // transaction history data update
+            db.transaction_history
+              .findAll({
+                limit: 1,
+                where: {
+                  user_id: user.id,
+                  date: req.body.date,
+                  status: "Pending",
+                },
+                order: [['id', 'DESC']]
+              })
+              .then((history_data) => {
+                if (req.body.status == "success"){
+                  history_data[0].update({
+                    status: "Complete"
+                  })
+                }
+                else if (req.body.status == "fail" || req.body.status == "error"){
+                  history_data[0].update({
+                    status: "Fail"
+                  })
+                }
+                console.log("here is is is okokokokok")
+                
+              })
+              .then(() =>{
+                res.json({ status: "Updated" });
+              })
+          })
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  });
+
+
   app.post("/reset_password", (req, res) => {
     console.log("reset password is called" + req.body.email);
     const email = req.body.email;
@@ -234,6 +344,7 @@ module.exports = (app, db) => {
       .then((user) => {
         if (Number(req.body.amount) > Number(user.main_balance)) {
           res.json({ big_amount: "Too big amount" });
+          return
         }
         //check if it is only pending cashout
         db.cashout

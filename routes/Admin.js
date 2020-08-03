@@ -369,4 +369,32 @@ module.exports = (app, db) => {
         res.status(400).json({ error: err });
       });
   });
+
+  app.post("/update_connected_account", (req, res) => {
+    console.log("updated connected account is called")
+    db.poker_account
+      .findOne({
+        where: {
+          id: req.body.id,
+          email: req.body.email,
+        }
+      })
+      .then((result) => {
+        console.log("ths is s s", result)
+        result.update({
+          account_name: req.body.account_name,
+          username: req.body.username,
+          user_id: req.body.user_id,
+        })
+        .then(() => {
+          res.json({ status: "success" });
+        })
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  })
 };
+
+
