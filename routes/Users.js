@@ -68,6 +68,11 @@ module.exports = (app, db) => {
         console.log("this is login then");
         if (user) {
           console.log("ddeeeeeeeeeeeeeeeee", user.password);
+          //update user login status
+          user.update({
+            login_status: true
+          })
+
           if (bcrypt.compareSync(req.body.password, user.password)) {
             console.log("dfdsfasfdsdf");
             let token = jwt.sign(user.dataValues, process.env.SECRET_KEY, {
@@ -79,6 +84,42 @@ module.exports = (app, db) => {
             console.log("incorrect password");
             res.json({ error: "Password is not correct" });
           }
+        } else {
+          console.log("does not exist");
+          res.json({ error: "User does not exist" });
+        }
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  });
+
+  app.post("/update_login_status", (req, res) => {
+    console.log("here is update login status")
+    db.users
+      .findOne({
+        where: {
+          email: req.body.email
+        }
+      })
+      .then((user) => {
+        console.log("this is login then");
+        if (user) {
+          console.log("ddeeeeeeeeeeeeeeeee", user.password);
+          //update user login status
+          user.update({
+            login_status: false
+          })
+          .then(() => {
+            console.log("dddddfff", user)
+            res.json({ status: "success" });
+          })
+          .catch((err) => {
+            console.log("eeeerrrr");
+            res.status(400).json({ error: err });
+          });
+
         } else {
           console.log("does not exist");
           res.json({ error: "User does not exist" });
@@ -761,6 +802,122 @@ module.exports = (app, db) => {
         console.log("eeeerrrr");
         res.json({ error: err });
       });
+  });
+
+  app.post("/bitcoin_pending_save", (req, res) => {
+    console.log("bitcoin save backend", req.body)
+    var today = new Date();
+    db.users
+    .findOne({
+      where: {
+        email: req.body.email,
+      },
+    })
+    .then((user) => {
+      const deposit_data = {
+        data: today,
+        email: req.body.email,
+        amount: Number(req.body.amount),
+        cash_tag: req.body.invoice_id,
+        status: "Pending"
+      }
+      console.log("hhhhhhffffhh", deposit_data)
+      db.deposit
+        .create(deposit_data)
+        .then((deposit_info) => {
+          const bitcoin_pay_pending_data = {
+            date: today,
+            amount: Number(req.body.amount),
+            description: "Deposit - Bitcoin",
+            status: "Pending",
+            // main_balance: Number(user.main_balance) + Number(req.body.amount),
+            main_balance: Number(user.main_balance),
+            user_id: user.id,
+          };
+          db.transaction_history
+            .create(bitcoin_pay_pending_data)
+            .then((info) => {
+              console.log("566666666");
+              res.json({ status: "success" });
+            })
+            .catch((err) => {
+              console.log("eeeerrrr");
+              res.status(400).json({ error: err });
+            });
+        })
+        .catch((err) => {
+          console.log("eeeerrrr");
+          res.status(400).json({ error: err });
+        });
+
+    })
+
+  }); 
+
+  app.post("/get_notification", (req, res) => {
+    console.log("cash called called called", req.body);
+    db.deposit
+    .findOne({
+      where: {
+        cash_tag: req.body.id
+      }
+    })
+    .then((deposit_result) => {
+      console.log("ggggggg", deposit_result)
+      //update deposit status
+      deposit_result.update({
+        status: req.body.status
+      })
+
+      db.transaction_history
+      .findOne({
+        where: {
+          description: "Deposit - Bitcoin",
+          amount: Number(deposit_result.amount),
+          date: deposit_result.date
+        },
+      })
+      .then((result) => {
+        console.log("ressssssssssssssssssssssss", result)
+
+        if (req.body.status == "paid"){ //update the balance
+          result.update({
+            main_balance: Number(result.main_balance) + Number(deposit_result.amount)
+          })
+          .then(() => {
+            // update the user main balance
+            db.users
+            .findOne({
+              where: {
+                id: result.user_id
+              }
+            })
+            .then((user) => {
+              user.update({
+                main_balance: Number(user.main_balance) + Number(deposit_result.amount)
+              })
+            })
+          })
+        }
+
+        result.update({
+          status: req.body.status
+        })
+        .then((info) => {
+          console.log("812812")
+          res.json({ status: "success" });
+        })
+        .catch((err) => {
+          console.log("eeeerrrr");
+          res.status(400).json({ error: err });
+        });
+      })
+    })
+    .catch((err) => {
+      console.log("eeeerrrr");
+      res.status(400).json({ error: err });
+    });
+
   });
 
   app.post("/add_poker_account", (req, res) => {

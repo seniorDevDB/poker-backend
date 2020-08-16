@@ -2,7 +2,8 @@
 
 const routes = [
     require('./Users'),
-    require('./Admin')
+    require('./Admin'),
+    require('./Automation'),
 ];
 
 // Add access to the app and db objects to each route
