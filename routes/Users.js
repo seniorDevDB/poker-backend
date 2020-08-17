@@ -1080,6 +1080,23 @@ module.exports = (app, db) => {
             .then((info) => {
               console.log("566666666");
               res.json({ date: today });
+              // create a new in automation queue
+              //  const poker_automation_data = {
+              //    date: today,
+              //    email: req.body.email,
+              //    transfer_from: req.body.transfer_from,
+              //    transfer_to: req.body.transfer_to,
+              //    amount: req.body.amount,
+              //    status: "Pending",
+              //    main_balance: user.main_balance
+              //  }
+
+              //  db.automation_queue
+              //   .create(poker_automation_data)
+              //   .then(() => {
+              //     res.json({ date: today });
+              //   })
+
             })
             .catch((err) => {
               console.log("eeeerrrr");
@@ -1109,6 +1126,22 @@ module.exports = (app, db) => {
               });
               console.log("566666666");
               res.json({ date: today });
+
+              // const poker_automation_data = {
+              //   date: today,
+              //   email: req.body.email,
+              //   transfer_from: req.body.transfer_from,
+              //   transfer_to: req.body.transfer_to,
+              //   amount: req.body.amount,
+              //   status: "Pending",
+              //   main_balance: user.main_balance
+              // }
+
+              // db.automation_queue
+              //  .create(poker_automation_data)
+              //  .then(() => {
+              //    res.json({ date: today });
+              //  })
             })
             .catch((err) => {
               console.log("eeeerrrr");

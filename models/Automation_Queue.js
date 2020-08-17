@@ -1,7 +1,7 @@
 'use strict'
 
 module.exports = (sequelize, DataTypes) => {
-  const AutomationQueue = sequelize.define('cashout', {
+  const AutomationQueue = sequelize.define('automation_queue', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
