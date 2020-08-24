@@ -68,10 +68,20 @@ module.exports = (app, db) => {
         console.log("this is login then");
         if (user) {
           console.log("ddeeeeeeeeeeeeeeeee", user.password);
+          var message_read_status = false      // this is for showing initial message to new users
+          if (user.popup_message_read_status == true) {
+            message_read_status = true
+          }
           //update user login status
           user.update({
             login_status: true
           })
+          
+          if (message_read_status == false){
+            user.update({
+              popup_message_read_status: true
+            })
+          }
 
           if (bcrypt.compareSync(req.body.password, user.password)) {
             console.log("dfdsfasfdsdf");
@@ -79,7 +89,9 @@ module.exports = (app, db) => {
               expiresIn: 1440,
             });
             console.log(token);
-            res.send(token);
+            console.log("this is messgae status", message_read_status)
+            res.send({token: token, msg_read_status: message_read_status })
+            // res.send(token);
           } else {
             console.log("incorrect password");
             res.json({ error: "Password is not correct" });
@@ -575,10 +587,11 @@ module.exports = (app, db) => {
         const deposit_data = {
           date: today,
           amount: Number(req.body.amount),
-          description: "Deposit - Pending",
+          description: "Deposit - Cash App",
           status: "Pending",
           main_balance: user.main_balance,
           user_id: user.id,
+          type: "cash-deposit"
         };
         console.log("311311311");
         db.transaction_history
@@ -632,7 +645,7 @@ module.exports = (app, db) => {
             const new_data_complete = {
               date: today,
               amount: Number(transaction_history_data.amount),
-              description: "Deposit - Complete",
+              description: "Deposit - Cash App",
               status: "Complete",
               main_balance:
                 Number(transaction_history_data.main_balance) +
@@ -642,7 +655,7 @@ module.exports = (app, db) => {
             const new_data_fail = {
               date: today,
               amount: Number(transaction_history_data.amount),
-              description: "Deposit - Fail",
+              description: "Deposit - Cash App",
               status: "Fail",
               main_balance: Number(transaction_history_data.main_balance),
               user_id: transaction_history_data.user_id,
@@ -655,7 +668,7 @@ module.exports = (app, db) => {
                 Number(transaction_history_data.amount);
               transaction_history_data
                 .update({
-                  description: "Deposit - Complete",
+                  description: "Deposit - Cash App",
                   status: "Complete",
                   main_balance: new_main_balance,
                 })
@@ -698,7 +711,7 @@ module.exports = (app, db) => {
               );
               transaction_history_data
                 .update({
-                  description: "Deposit - Fail",
+                  description: "Deposit - Cash App",
                   status: "Fail",
                 })
                 .then((result) => {
@@ -795,7 +808,6 @@ module.exports = (app, db) => {
         },
       })
       .then((accounts) => {
-        console.log("518518", accounts);
         res.send(accounts);
       })
       .catch((err) => {
@@ -983,7 +995,6 @@ module.exports = (app, db) => {
         },
       })
       .then((accounts) => {
-        console.log("518518", accounts);
         res.send(accounts);
       })
       .catch((err) => {
@@ -1002,7 +1013,6 @@ module.exports = (app, db) => {
         },
       })
       .then((accounts) => {
-        console.log("518518", accounts);
         res.send(accounts);
       })
       .catch((err) => {
@@ -1074,11 +1084,11 @@ module.exports = (app, db) => {
             // main_balance: Number(user.main_balance) + Number(req.body.amount),
             main_balance: Number(user.main_balance),
             user_id: user.id,
+            type: "transfer",
           };
           db.transaction_history
             .create(pokerAutomationTransactionHistoryData_from)
             .then((info) => {
-              console.log("566666666");
               res.json({ date: today });
               // create a new in automation queue
               //  const poker_automation_data = {
@@ -1103,10 +1113,7 @@ module.exports = (app, db) => {
               res.status(400).json({ error: err });
             });
         } else if (req.body.transfer_from == "Main Balance") {
-          console.log(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            user.main_balance
-          );
+
           console.log(Number(user.main_balance) - Number(req.body.amount));
           const pokerAutomationTransactionHistoryData_to = {
             date: today,
@@ -1116,6 +1123,7 @@ module.exports = (app, db) => {
             main_balance: Number(user.main_balance) - Number(req.body.amount),
             // main_balance: Number(user.main_balance),
             user_id: user.id,
+            type: "transfer",
           };
           db.transaction_history
             .create(pokerAutomationTransactionHistoryData_to)

@@ -39,7 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         login_status: {
             type: DataTypes.BOOLEAN,
             defaultValue: DataTypes.FALSE
-        }
+        },
+        popup_message_read_status: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: DataTypes.FALSE
+        },
     }, {
         timestamps: false
     });
