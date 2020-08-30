@@ -322,38 +322,39 @@ module.exports = (app, db) => {
     db.users
       .findOne({
         where: {
-          email: req.body.sender,
-        },
-      })
-      .then((sender_data) => {
-        update_balance =
-          Number(sender_data.main_balance) - Number(req.body.amount);
-        console.log(update_balance);
-        sender_data.update({
-          main_balance: update_balance,
-        });
-        const transaction_history_sender_data = {
-          date: today,
-          amount: req.body.amount,
-          description: "P2P to " + req.body.receiver,
-          status: "Complete",
-          main_balance: update_balance,
-          user_id: sender_data.id,
-        };
-        db.transaction_history.create(transaction_history_sender_data);
-      })
-      .catch((err) => {
-        console.log("errororvbvbvb 147", err);
-        res.json({ error: "Sender error" });
-      });
-
-    db.users
-      .findOne({
-        where: {
           email: req.body.receiver,
         },
       })
       .then((receiver_data) => {
+        if (receiver_data == null){
+          console.log("not existit")
+          res.json({ error: "This player does not exist" });
+        }
+        else{
+          db.users
+        .findOne({
+          where: {
+            email: req.body.sender,
+          },
+        })
+        .then((sender_data) => {
+          update_balance =
+            Number(sender_data.main_balance) - Number(req.body.amount);
+          console.log(update_balance);
+          sender_data.update({
+            main_balance: update_balance,
+          });
+          const transaction_history_sender_data = {
+            date: today,
+            amount: req.body.amount,
+            description: "P2P to " + req.body.receiver,
+            status: "Complete",
+            main_balance: update_balance,
+            user_id: sender_data.id,
+          };
+          db.transaction_history.create(transaction_history_sender_data);
+        })
+
         update_balance =
           Number(receiver_data.main_balance) + Number(req.body.amount);
         receiver_data.update({
@@ -377,13 +378,43 @@ module.exports = (app, db) => {
             console.log("errororvbvbvb 168", err);
             res.json({ error: "This player does not exist" });
           });
+        }
+        
+        
       })
       .catch((err) => {
         console.log("erroror 107");
         console.log(err);
         res.json({ error: "This player does not exist" });
       });
+
+
+    
   });
+
+  // app.post("/bitcoin_cashout", (req, res) => {
+  //   var today = new Date();
+  //   console.log("citcoin cashout called")
+  //   db.users
+  //     .findOne({
+  //       where: {
+  //         email: req.body.email,
+  //       }
+  //     })
+  //     .then((user) => {
+  //       if (Number(req.body.amount) > Number(user.main_balance)) {
+  //         res.json({ big_amount: "Too big amount" });
+  //         return
+  //       }
+  //       const bitcoin_info = {
+  //         date: today,
+  //         email: req.body.email,
+  //         amount: req.body.amount,
+  //         cash_tag: req.body.bitcoin_address,
+
+  //       }
+  //     })
+  // })
 
   app.post("/cashout", (req, res) => {
     var today = new Date();
@@ -478,42 +509,44 @@ module.exports = (app, db) => {
               },
             })
             .then((transaction_history_data) => {
-              console.log("242242242");
-              console.log(req.body.amount);
-              console.log(Number(req.body.amount));
-              console.log(
-                Number(transaction_history_data.main_balance) -
-                  Number(req.body.amount)
-              );
-              transaction_history_data.update({
-                status: "Cancelled",
-              });
-              const temp_data = {
-                date: today,
-                amount: Math.abs(Number(req.body.amount)),
-                description: "Cashout - Refund",
-                status: "Complete",
-                main_balance:
-                  Number(transaction_history_data.main_balance) -
-                  Number(req.body.amount),
-                user_id: req.body.id,
-              };
-              db.transaction_history.create(temp_data).then((data) => {
-                db.users
-                  .findOne({
-                    where: {
-                      email: req.body.email,
-                    },
-                  })
-                  .then((user_data) => {
-                    user_data.update({
-                      main_balance:
-                        Number(transaction_history_data.main_balance) -
-                        Number(req.body.amount),
-                    });
+              db.users
+                .findOne({
+                  where: {
+                    email: req.body.email
+                  }
+                })
+                .then((user_info) => {
+                  transaction_history_data.update({
+                    status: "Cancelled",
                   });
-                res.json({ status: "Cancelled" });
-              });
+                  const temp_data = {
+                    date: today,
+                    amount: Math.abs(Number(req.body.amount)),
+                    description: "Cashout - Refund",
+                    status: "Complete",
+                    main_balance:
+                      Number(user_info.main_balance) -
+                      Number(req.body.amount),
+                    user_id: req.body.id,
+                  };
+                  db.transaction_history.create(temp_data).then((data) => {
+                    db.users
+                      .findOne({
+                        where: {
+                          email: req.body.email,
+                        },
+                      })
+                      .then((user_data) => {
+                        user_data.update({
+                          main_balance:
+                            Number(user_info.main_balance) -
+                            Number(req.body.amount),
+                        });
+                      });
+                    res.json({ status: "Cancelled" });
+                  });
+                })
+              
             })
             .catch((err) => {
               console.log("eeeerrrr");
@@ -750,51 +783,65 @@ module.exports = (app, db) => {
 
   app.post("/add_cash_account", (req, res) => {
     var today = new Date();
-    const cashAccountData = {
-      date: today,
-      email: req.body.email,
-      account_name: "Cash Tag",
-      username: req.body.cash_tag,
-      poker_or_cash: "cash",
-    };
     db.poker_account
-      .findOne({
+      .findAll({
         where: {
-          email: req.body.email,
           username: req.body.cash_tag,
-        },
-      })
-      .then((poker_account) => {
-        if (!poker_account) {
-          console.log("create a new cash account");
-          db.poker_account
-            .create(cashAccountData)
-            .then((acount) => {
-              db.poker_account
-                .findAll({
-                  order: [["id", "DESC"]],
-                  where: {
-                    email: req.body.email,
-                  },
-                })
-                .then((accounts) => {
-                  res.send(accounts);
-                })
-                .catch((err) => {
-                  console.log("eeeerrrr");
-                  res.status(400).json({ error: err });
-                });
-            })
-            .catch((err) => {
-              res.send("error: " + err);
-            });
-        } else {
-          res.json({ error: "User already exists" });
+          poker_or_cash: "cash"
         }
       })
-      .catch((err) => {
-        res.send("error: " + err);
-      });
+      .then((cash_accounts) => {
+        if (cash_accounts.length > 0){
+          res.json({ error: "User already exists" });
+        }
+        const cashAccountData = {
+          date: today,
+          email: req.body.email,
+          account_name: "Cash Tag",
+          username: req.body.cash_tag,
+          poker_or_cash: "cash",
+        };
+        db.poker_account
+          .findOne({
+            where: {
+              email: req.body.email,
+              username: req.body.cash_tag,
+              poker_or_cash: "cash",
+            },
+          })
+          .then((poker_account) => {
+            if (!poker_account) {
+              console.log("create a new cash account");
+              db.poker_account
+                .create(cashAccountData)
+                .then((acount) => {
+                  db.poker_account
+                    .findAll({
+                      order: [["id", "DESC"]],
+                      where: {
+                        email: req.body.email,
+                      },
+                    })
+                    .then((accounts) => {
+                      res.send(accounts);
+                    })
+                    .catch((err) => {
+                      console.log("eeeerrrr");
+                      res.status(400).json({ error: err });
+                    });
+                })
+                .catch((err) => {
+                  res.send("error: " + err);
+                });
+            } else {
+              res.json({ error: "User already exists" });
+            }
+          })
+        })
+        .catch((err) => {
+          res.send("error: " + err);
+        });
+
   });
 
   app.post("/get_cash_account", (req, res) => {
@@ -943,41 +990,56 @@ module.exports = (app, db) => {
       poker_or_cash: "poker",
     };
     db.poker_account
-      .findOne({
+      .findAll({
         where: {
-          email: req.body.email,
-          account_name: req.body.club_name,
           username: req.body.username,
-          user_id: req.body.user_id,
-        },
-      })
-      .then((poker_account) => {
-        if (!poker_account) {
-          console.log("create a new poker account");
-          db.poker_account
-            .create(pokerAccountData)
-            .then((acount) => {
-              db.poker_account
-                .findAll({
-                  order: [["id", "DESC"]],
-                  where: {
-                    email: req.body.email,
-                  },
-                })
-                .then((accounts) => {
-                  res.send(accounts);
-                })
-                .catch((err) => {
-                  console.log("eeeerrrr");
-                  res.status(400).json({ error: err });
-                });
-            })
-            .catch((err) => {
-              res.send("error: " + err);
-            });
-        } else {
-          res.json({ error: "User already exists" });
+          poker_or_cash: "poker"
         }
+      })
+      .then((accounts) => {
+        console.log("here is accoutnsssssssss", accounts)
+        console.log(accounts.length)
+        if (accounts.length > 0){
+          console.log("inside")
+          res.json({ error: "User already exists" });}
+        db.poker_account
+        .findOne({
+          where: {
+            email: req.body.email,
+            account_name: req.body.club_name,
+            username: req.body.username,
+            user_id: req.body.user_id,
+            poker_or_cash: "poker",
+          },
+        })
+        .then((poker_account) => {
+          if (!poker_account) {
+            console.log("create a new poker account");
+            db.poker_account
+              .create(pokerAccountData)
+              .then((acount) => {
+                db.poker_account
+                  .findAll({
+                    order: [["id", "DESC"]],
+                    where: {
+                      email: req.body.email,
+                    },
+                  })
+                  .then((accounts) => {
+                    res.send(accounts);
+                  })
+                  .catch((err) => {
+                    console.log("eeeerrrr");
+                    res.status(400).json({ error: err });
+                  });
+              })
+              .catch((err) => {
+                res.send("error: " + err);
+              });
+          } else {
+            res.json({ error: "User already exists" });
+          }
+        })
       })
       .catch((err) => {
         res.send("error: " + err);
