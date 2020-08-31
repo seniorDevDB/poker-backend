@@ -44,6 +44,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BOOLEAN,
             defaultValue: DataTypes.FALSE
         },
+        pending_status: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: DataTypes.FALSE
+        }
     }, {
         timestamps: false
     });

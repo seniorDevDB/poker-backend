@@ -36,6 +36,10 @@ module.exports = (app, db) => {
                 })
                 .then((transaction_history_result) => {
                     var transaction_history_length = transaction_history_result.length
+                    //update pending status
+                    db.users.findOne({where: {id: transaction_history_result[transaction_history_length-1].user_id}}).then((ur) => {ur.update({pending_status: false})})
+
+                    
                     if (req.body.result == "Complete") {
                         console.log("nnnnnn______________________", transaction_history_result[transaction_history_length-1])
 
@@ -146,6 +150,9 @@ module.exports = (app, db) => {
             })
             .then((transaction_history_result) =>{
               console.log("ggg", transaction_history_result)
+              //update pending status
+              db.users.findOne({where: {id: transaction_history_result.user_id}}).then((ur) => {ur.update({pending_status: false})})
+
               if (req.body.result == "Complete"){
                 transaction_history_result.update({
                   status: "Complete",

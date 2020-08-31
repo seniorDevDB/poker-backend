@@ -609,6 +609,7 @@ module.exports = (app, db) => {
   app.post("/deposit_continue", (req, res) => {
     console.log("deposit called from frontend", req.body);
     var today = new Date();
+    
     db.users
       .findOne({
         where: {
@@ -617,6 +618,9 @@ module.exports = (app, db) => {
       })
       .then((user) => {
         console.log("okok", user);
+        //update pending status
+        user.update({pending_status: true})
+
         const deposit_data = {
           date: today,
           amount: Number(req.body.amount),
@@ -805,7 +809,7 @@ module.exports = (app, db) => {
           .findOne({
             where: {
               email: req.body.email,
-              username: req.body.cash_tag,
+              // username: req.body.cash_tag,
               poker_or_cash: "cash",
             },
           })
@@ -838,9 +842,9 @@ module.exports = (app, db) => {
             }
           })
         })
-        .catch((err) => {
-          res.send("error: " + err);
-        });
+      .catch((err) => {
+        res.send("error: " + err);
+      });
 
   });
 
@@ -873,6 +877,10 @@ module.exports = (app, db) => {
       },
     })
     .then((user) => {
+      //update pending in the user
+      db.user.update({
+        pending_status: true
+      })
       const deposit_data = {
         data: today,
         email: req.body.email,
@@ -915,6 +923,7 @@ module.exports = (app, db) => {
 
   app.post("/get_notification", (req, res) => {
     console.log("cash called called called", req.body);
+    
     db.deposit
     .findOne({
       where: {
@@ -938,6 +947,7 @@ module.exports = (app, db) => {
       })
       .then((result) => {
         console.log("ressssssssssssssssssssssss", result)
+        db.users.findOne({where: {id: result.user_id}}).then((ur) => {ur.update({pending_status: false})})
 
         if (req.body.status == "paid"){ //update the balance
           result.update({
@@ -1006,13 +1016,14 @@ module.exports = (app, db) => {
         .findOne({
           where: {
             email: req.body.email,
-            account_name: req.body.club_name,
-            username: req.body.username,
-            user_id: req.body.user_id,
+            // account_name: req.body.club_name,
+            // username: req.body.username,
+            // user_id: req.body.user_id,
             poker_or_cash: "poker",
           },
         })
         .then((poker_account) => {
+          console.log("here is poekr acccccccccc")
           if (!poker_account) {
             console.log("create a new poker account");
             db.poker_account
@@ -1103,6 +1114,29 @@ module.exports = (app, db) => {
       });
   });
 
+  app.post("/check_pending_status", (req, res) => {
+    console.log("checking pendign status is called in the backedn")
+    db.users
+      .findOne({
+        where: {
+          email: req.body.email,
+        }
+      })
+      .then((user) => {
+        if (user && user.pending_status == true){
+          // there is pending 
+          res.json({ status: "pending" });
+        }
+        else{
+          res.json({ status: "no_pending" });
+        }
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  })
+
   app.post("/poker_automation_pending", (req, res) => {
     console.log("called from frontend poker automation", req.body);
     var today = new Date();
@@ -1138,6 +1172,9 @@ module.exports = (app, db) => {
         ) {
           res.json({ status: "Too big amount" });
         } else if (req.body.transfer_to == "Main Balance") {
+          //update pending status
+          user.update({pending_status: true})
+
           const pokerAutomationTransactionHistoryData_from = {
             date: today,
             amount: Number(req.body.amount),
@@ -1175,6 +1212,8 @@ module.exports = (app, db) => {
               res.status(400).json({ error: err });
             });
         } else if (req.body.transfer_from == "Main Balance") {
+          //update pending status
+          user.update({pending_status: true})
 
           console.log(Number(user.main_balance) - Number(req.body.amount));
           const pokerAutomationTransactionHistoryData_to = {
