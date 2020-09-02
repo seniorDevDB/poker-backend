@@ -36,6 +36,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BOOLEAN,
             defaultValue: DataTypes.FALSE
         },
+        login_permission: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: DataTypes.FALSE
+        },
         login_status: {
             type: DataTypes.BOOLEAN,
             defaultValue: DataTypes.FALSE

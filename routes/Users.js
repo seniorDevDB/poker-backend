@@ -68,6 +68,12 @@ module.exports = (app, db) => {
         console.log("this is login then");
         if (user) {
           console.log("ddeeeeeeeeeeeeeeeee", user.password);
+          //check if the user is permitted to login
+          var user_login_permission = false
+          if (user.login_permission == true){
+            user_login_permission = true
+          }
+
           var message_read_status = false      // this is for showing initial message to new users
           if (user.popup_message_read_status == true) {
             message_read_status = true
@@ -90,7 +96,7 @@ module.exports = (app, db) => {
             });
             console.log(token);
             console.log("this is messgae status", message_read_status)
-            res.send({token: token, msg_read_status: message_read_status })
+            res.send({token: token, msg_read_status: message_read_status, login_permission: user_login_permission })
             // res.send(token);
           } else {
             console.log("incorrect password");
@@ -798,49 +804,51 @@ module.exports = (app, db) => {
         if (cash_accounts.length > 0){
           res.json({ error: "User already exists" });
         }
-        const cashAccountData = {
-          date: today,
-          email: req.body.email,
-          account_name: "Cash Tag",
-          username: req.body.cash_tag,
-          poker_or_cash: "cash",
-        };
-        db.poker_account
-          .findOne({
-            where: {
-              email: req.body.email,
-              // username: req.body.cash_tag,
-              poker_or_cash: "cash",
-            },
-          })
-          .then((poker_account) => {
-            if (!poker_account) {
-              console.log("create a new cash account");
-              db.poker_account
-                .create(cashAccountData)
-                .then((acount) => {
-                  db.poker_account
-                    .findAll({
-                      order: [["id", "DESC"]],
-                      where: {
-                        email: req.body.email,
-                      },
-                    })
-                    .then((accounts) => {
-                      res.send(accounts);
-                    })
-                    .catch((err) => {
-                      console.log("eeeerrrr");
-                      res.status(400).json({ error: err });
-                    });
-                })
-                .catch((err) => {
-                  res.send("error: " + err);
-                });
-            } else {
-              res.json({ error: "User already exists" });
-            }
-          })
+        else {
+          const cashAccountData = {
+            date: today,
+            email: req.body.email,
+            account_name: "Cash Tag",
+            username: req.body.cash_tag,
+            poker_or_cash: "cash",
+          };
+          db.poker_account
+            .findOne({
+              where: {
+                email: req.body.email,
+                // username: req.body.cash_tag,
+                poker_or_cash: "cash",
+              },
+            })
+            .then((poker_account) => {
+              if (!poker_account) {
+                console.log("create a new cash account");
+                db.poker_account
+                  .create(cashAccountData)
+                  .then((acount) => {
+                    db.poker_account
+                      .findAll({
+                        order: [["id", "DESC"]],
+                        where: {
+                          email: req.body.email,
+                        },
+                      })
+                      .then((accounts) => {
+                        res.send(accounts);
+                      })
+                      .catch((err) => {
+                        console.log("eeeerrrr");
+                        res.status(400).json({ error: err });
+                      });
+                  })
+                  .catch((err) => {
+                    res.send("error: " + err);
+                  });
+              } else {
+                res.json({ error: "User already exists" });
+              }
+            })
+        }
         })
       .catch((err) => {
         res.send("error: " + err);
@@ -1012,45 +1020,49 @@ module.exports = (app, db) => {
         if (accounts.length > 0){
           console.log("inside")
           res.json({ error: "User already exists" });}
-        db.poker_account
-        .findOne({
-          where: {
-            email: req.body.email,
-            // account_name: req.body.club_name,
-            // username: req.body.username,
-            // user_id: req.body.user_id,
-            poker_or_cash: "poker",
-          },
-        })
-        .then((poker_account) => {
-          console.log("here is poekr acccccccccc")
-          if (!poker_account) {
-            console.log("create a new poker account");
-            db.poker_account
-              .create(pokerAccountData)
-              .then((acount) => {
-                db.poker_account
-                  .findAll({
-                    order: [["id", "DESC"]],
-                    where: {
-                      email: req.body.email,
-                    },
-                  })
-                  .then((accounts) => {
-                    res.send(accounts);
-                  })
-                  .catch((err) => {
-                    console.log("eeeerrrr");
-                    res.status(400).json({ error: err });
-                  });
-              })
-              .catch((err) => {
-                res.send("error: " + err);
-              });
-          } else {
-            res.json({ error: "User already exists" });
-          }
-        })
+        else{
+          db.poker_account
+          .findOne({
+            where: {
+              email: req.body.email,
+              // account_name: req.body.club_name,
+              // username: req.body.username,
+              // user_id: req.body.user_id,
+              poker_or_cash: "poker",
+            },
+          })
+          .then((poker_account) => {
+            console.log("here is poekr acccccccccc")
+            if (!poker_account) {
+              console.log("create a new poker account");
+              db.poker_account
+                .create(pokerAccountData)
+                .then((acount) => {
+                  db.poker_account
+                    .findAll({
+                      order: [["id", "DESC"]],
+                      where: {
+                        email: req.body.email,
+                      },
+                    })
+                    .then((accounts) => {
+                      res.send(accounts);
+                    })
+                    .catch((err) => {
+                      console.log("eeeerrrr");
+                      res.status(400).json({ error: err });
+                    });
+                })
+                .catch((err) => {
+                  res.send("error: " + err);
+                });
+            } else {
+              res.json({ error: "User already exists" });
+            }
+          })
+        }
+        
+        
       })
       .catch((err) => {
         res.send("error: " + err);
