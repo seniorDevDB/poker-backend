@@ -13,6 +13,9 @@ module.exports = (sequelize, DataTypes) => {
         last_name: {
             type: DataTypes.STRING
         },
+        phone_number: {
+            type: DataTypes.INTEGER
+        },
         email: {
             type: DataTypes.STRING
         },

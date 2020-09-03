@@ -21,6 +21,7 @@ module.exports = (app, db) => {
     const userData = {
       first_name: req.body.first_name,
       last_name: req.body.last_name,
+      phone_number: req.body.phone_number,
       email: req.body.email,
       password: req.body.password,
       created: today,

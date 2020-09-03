@@ -7,7 +7,7 @@ module.exports = (app, db) => {
     console.log("users called from frontend");
     db.users
       .findAll({
-        order: [["id", "DESC"]],
+        // order: [["id", "DESC"]],
       })
       .then((users) => {
         console.log("database from db", users);
@@ -18,6 +18,28 @@ module.exports = (app, db) => {
         res.status(400).json({ error: err });
       });
   });
+
+  app.post("/update_login_permission", (req, res) => {
+    console.log("backend is called ssss", req.body)
+    console.log(req.body.id + 1)
+    db.users
+      .findOne({
+        where: {
+          id: req.body.id + 1
+        }
+      })
+      .then((user) => {
+        console.log("here is user", user)
+        user.update({
+          login_permission: req.body.login_permission
+        })
+        res.json({status: 'complete'})
+      })
+      .catch((err) => {
+        console.log("eeeerrrr");
+        res.status(400).json({ error: err });
+      });
+  })
 
   app.post("/p2p_transfer", (req, res) => {
     console.log("users called from frontend");
